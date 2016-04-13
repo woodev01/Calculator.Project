@@ -14,22 +14,13 @@ class CalculatorViewController: UIViewController {
     @IBOutlet weak var DisplayValue: UILabel!
     @IBOutlet weak var StackValue: UILabel!
     
-    
+    var brain = CalculatorBrain()
     
     var checkForNumStart: Bool = false
     var checkForAlreadyAFloat: Bool = false
-    var firstInStack: Bool = true
     
     @IBAction func numKeys(sender: UIButton) {
         var keyValue = sender.currentTitle!
-        if(keyValue == "π") {
-            if checkForNumStart {
-                enterKey()
-                keyValue = String(M_PI)
-            } else {
-                keyValue = String(M_PI)
-            }
-        }
         if(keyValue == ".") {
             if checkForNumStart {
                 if checkForAlreadyAFloat {
@@ -49,63 +40,48 @@ class CalculatorViewController: UIViewController {
     
     
     @IBAction func operatorKeys(sender: UIButton) {
-        let operation = sender.currentTitle!
         if checkForNumStart {
             enterKey()
         }
-        
-        StackValue.text = StackValue.text! + ", " + (String)(operation)
-        
-        switch operation {
-        case "×": performOperation{ $0 * $1 }
-        case "÷": performOperation{ $1 / $0 }
-        case "+": performOperation{ $0 + $1 }
-        case "-": performOperation{ $1 - $0 }
-        case "√": performOperation{ sqrt($0)}
-        case "Sin": performOperation{ sin($0) }
-        case "Cos": performOperation{ cos($0) }
-        default: break
-        }
-        
-    }
-
-    func performOperation(operation: (Double, Double) -> Double) {
-        if operandStack.count > 1 {
-            displayedValue = operation(operandStack.removeLast(), operandStack.removeLast())
-            enterKey()
+        if let operation = sender.currentTitle {
+            displayedValue = brain.performOperation(operation)
+            StackValue.text = brain.description
         }
     }
     
-    @objc(performOperation2:) func performOperation(operation: (Double) -> Double) {
-        if operandStack.count > 0 {
-            displayedValue = operation(operandStack.removeLast())
-            enterKey()
+    @IBAction func setVariable(sender: UIButton) {
+        let variable = sender.currentTitle!.characters.last!
+        if displayedValue != nil {
+            brain.variableValues["\(variable)"] = displayedValue
+            displayedValue = brain.evaluate()
         }
+        
+        checkForNumStart = false
     }
     
-    var operandStack = Array<Double>()
+    
+    @IBAction func pushVariable(sender: UIButton) {
+        if checkForNumStart {
+            enterKey()
+        }
+        displayedValue = brain.pushOperand(sender.currentTitle!)
+        
+    }
+    
     
     @IBAction func enterKey() {
-        operandStack.append(displayedValue);
-        if firstInStack {
-            StackValue.text = StackValue.text! + " " + DisplayValue.text!
-        } else {
-            StackValue.text = StackValue.text! + ", " + DisplayValue.text!
-        }
-        print("Operand Stack = \(operandStack)")
-        DisplayValue.text = "0"
+        displayedValue = brain.pushOperand(displayedValue!)
+        StackValue.text = brain.description
+        
         checkForNumStart = false
         checkForAlreadyAFloat = false
-        firstInStack = false
-        
     }
     
     
     @IBAction func clearKey() {
         DisplayValue.text = "0"
-        StackValue.text = "Stack: "
-        operandStack.removeAll()
-        firstInStack = true
+        StackValue.text = " "
+        brain = CalculatorBrain()
         checkForNumStart = false
         checkForAlreadyAFloat = false
     }
@@ -113,14 +89,18 @@ class CalculatorViewController: UIViewController {
     
     
     
-    var displayedValue: Double {
+    var displayedValue: Double? {
         get {
             return NSNumberFormatter().numberFromString(DisplayValue.text!)!.doubleValue
         }
         set {
-            DisplayValue.text = "\(newValue)"
-            checkForNumStart = false
-            checkForAlreadyAFloat = false
+            if let val = newValue {
+                DisplayValue.text = "\(val)"
+                checkForNumStart = false
+                checkForAlreadyAFloat = false
+            } else {
+                DisplayValue.text = " "
+            }
         }
     }
 }
